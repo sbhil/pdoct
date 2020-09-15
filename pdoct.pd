@@ -1,0 +1,12 @@
+#N canvas 731 155 450 300 12;
+#X obj 194 193 dac~;
+#X obj 194 131 osc~ 440;
+#X obj 339 31 vsl 15 128 0.001 1 1 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 11600 1;
+#X floatatom 339 190 5 0 0 0 - - -;
+#X obj 194 162 pdoct~ testfunc;
+#X connect 1 0 4 0;
+#X connect 2 0 3 0;
+#X connect 2 0 4 1;
+#X connect 4 0 0 0;
+#X connect 4 0 0 1;
