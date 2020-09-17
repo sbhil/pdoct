@@ -58,12 +58,12 @@ static octave_value_list oct_wrapper_parse_arguments(const char* args)
 }
 
 
-void oct_wrapper_run(const char* funcname, float* input, float* output, int n, float param)
+void oct_wrapper_run(const char* funcname, float** input, unsigned int ninput, float** output, unsigned int noutput, unsigned int nsamples, float param)
 {
     //FloatNDArray nd;
     //FloatMatrix m;
-    FloatRowVector f(n);
-    memcpy(f.fortran_vec(), input, sizeof(float) * n);
+    FloatRowVector f(nsamples);
+    memcpy(f.fortran_vec(), input[0], sizeof(float) * nsamples);
     
     //input values
     octave_value_list in;
@@ -72,7 +72,7 @@ void oct_wrapper_run(const char* funcname, float* input, float* output, int n, f
 
     octave_value_list out = octave::feval(funcname, in, 1);
 
-    memcpy(output, out(0)./*float_array_value()*/float_row_vector_value().fortran_vec(), sizeof(float) * n);   
+    memcpy(output[0], out(0)./*float_array_value()*/float_row_vector_value().fortran_vec(), sizeof(float) * nsamples);   
 }
 
 
