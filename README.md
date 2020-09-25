@@ -1,19 +1,31 @@
-PURPOSE
+# PDOCT README
 
-USAGE
+## PURPOSE
 
-SETTING UP YOUR OCTAVE PATH
+## USAGE
 
-BUILDING
+### SETTING UP YOUR OCTAVE PATH
 
-LICENSE
+### USING PDOCT FROM PURE DATA
 
-TODO
+## BUILDING
 
-1. Create pd external with variable number of input/outs (dsp_addv for dsp processing and ? for adding inlets/outlets)
+### WINDOWS
 
-2. make parser for a list of parameters to pass from pd to octave
+### LINUX
 
-3. create pd patch that concatenates several parameters (floats or strings) into one list to pass to pdoct~
+## LICENSE
 
-4. make octave read the sytstem .octaverc files
+## TODO
+
+* create pd external with variable number of input/outs (dsp_addv for dsp processing and ? for adding inlets/outlets)
+* solve issue where additional input wont let signals connct to them
+* make parser for a list of parameters to pass from pd to octave
+* create pd patch that concatenates several parameters (floats or strings) into one list to pass to pdoct~
+* create pd help file
+* make octave read the sytstem .octaverc files, not just the local users
+* add some error handling to e.g.
+ * launching the octave interpreter
+ * invalid filenames
+ * same number of in/out for octave functions and pdoct external
+ 
