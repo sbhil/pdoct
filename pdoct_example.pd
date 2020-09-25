@@ -4,9 +4,9 @@
 #X obj 296 21 vsl 15 128 0.001 1 1 0 empty empty empty 0 -9 0 10 -262144
 -1 -1 0 1;
 #X floatatom 300 186 5 0 0 0 - - -;
-#X obj 123 160 pdoct~ testfunc, f 19;
+#X obj 123 160 pdoct~ octavefunc 2;
 #X connect 1 0 4 0;
 #X connect 2 0 3 0;
-#X connect 2 0 4 1;
+#X connect 2 0 4 2;
 #X connect 4 0 0 0;
-#X connect 4 0 0 1;
+#X connect 4 1 0 1;

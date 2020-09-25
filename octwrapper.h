@@ -1,9 +1,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
  *                                                                           *
- *  pdoct is an external for Pure Data for processing data using GNU Octave  *
+ *  pdoct is a Pure Data external for processing audio using GNU Octave      *
  *  scripts.                                                                 *
  *                                                                           *
- *  Copyright (C) 2020 Sebastian Boli Hildebrandt                            *
+ *  Copyright (C) 2020 Sebastian Boli Hildebrandt.                           *
  *                                                                           *
  *  This program is free software: you can redistribute it and/or modify     *
  *  it under the terms of the GNU General Public License as published by     *
@@ -26,9 +26,9 @@
     extern "C" {
 #endif
 
-void oct_wrapper_run(const char* funcname, float** input, unsigned int ninput, float** output, unsigned int noutput, unsigned int nsamples, float param);
-void oct_wrapper_init();
+void octwrapper_run(const char* funcname, float** input, unsigned int ninput, float** output, unsigned int noutput, unsigned int nsamples, float param);
+void octwrapper_init();
 
 #ifdef __cplusplus
-     }
+    }
 #endif

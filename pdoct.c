@@ -1,9 +1,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
  *                                                                           *
- *  pdoct is an external for Pure Data for processing data using GNU Octave  *
+ *  pdoct is a Pure Data external for processing audio using GNU Octave      *
  *  scripts.                                                                 *
  *                                                                           *
- *  Copyright (C) 2020 Sebastian Boli Hildebrandt                            *
+ *  Copyright (C) 2020 Sebastian Boli Hildebrandt.                           *
  *                                                                           *
  *  This program is free software: you can redistribute it and/or modify     *
  *  it under the terms of the GNU General Public License as published by     *
@@ -25,10 +25,8 @@
 #include <m_pd.h>
 
 #include "octwrapper.h"
- 
 
-#include <unistd.h>
-#include <stdio.h>
+
 
 /* ****************************************************************************
  * 
@@ -49,19 +47,19 @@ typedef struct _pdoct
   //number of outputs
   t_float f_nout;
 
-  //needed for replacing float inputs at the signal inlet
+  //needed for replacing float inputs at the (first) signal inlet
   t_float f_dummy;
 
   //octave script name
   t_symbol *s_octfunc;
 
   //parameter list
-  t_float f_param;
+  t_float f_param; //TODO: change this to a list instead of just a single float parameter
 
   //parameter list inlet
-  t_inlet* x_param; //TODO: change this to a list of parameters (char array?)
+  t_inlet* x_param_in;
 
-  //signal inlets  
+  //signal inlets
   t_inlet** x_sig_in;
 
   //signal outlets
@@ -92,7 +90,7 @@ t_int *pdoct_perform(t_int *w)
   int         nsamples   = (int)         (w[4]);
 
   //do processing
-  oct_wrapper_run(x->s_octfunc->s_name, in, x->f_nin, out, x->f_nout, nsamples, x->f_param);
+  octwrapper_run(x->s_octfunc->s_name, in, x->f_nin, out, x->f_nout, nsamples, x->f_param);
 
   post("pdoct_perform: end");
 
@@ -103,7 +101,7 @@ void pdoct_dsp(t_pdoct *x, t_signal **sp)
 {
   post("pdoct_dsp: start");
 
-  //signals are numbered with inputs first followed by outputs, both ordered from left to right...
+  //signals are counted with inputs first followed by outputs, both ordered from left to right...
 
   //input pointers
   for (size_t i = 0; i < x->f_nin; i++)
@@ -167,11 +165,8 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
   //init params
   x->f_param = 0;
 
-  //store script name
-  x->s_octfunc = s;
-
   //create inlet for parameter argument list
-  x->x_param = floatinlet_new(&x->x_obj, &x->f_param); 
+  x->x_param_in = floatinlet_new(&x->x_obj, &x->f_param); 
 
   //create signal inlets
   x->x_sig_in = malloc(x->f_nin*sizeof(t_inlet*)); //...allocate memory for inlets
@@ -183,12 +178,12 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
   for (size_t i = 0; i < x->f_nout; i++)  
     x->x_sig_out[i] = outlet_new(&x->x_obj, &s_signal);
 
-  //allocate data buffer pointers
-  x->x_f_in = malloc(x->f_nin*sizeof(t_sample*));
+  //allocate memory for data buffer pointers
+  x->x_f_in  = malloc(x->f_nin*sizeof(t_sample*));
   x->x_f_out = malloc(x->f_nout*sizeof(t_sample*));
 
   //initialize the octave wrapper
-  oct_wrapper_init();
+  octwrapper_init();
 
   post("pdoct_new (contructor): end");
 
