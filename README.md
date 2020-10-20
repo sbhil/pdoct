@@ -16,6 +16,12 @@
 
 ## LICENSE
 
+pdoct is licensed under the [GNU GENERAL PUBLIC LICENSE](gnu.org/licenses/gpl-3.0.html). The license can be found online or in LICENSE.txt.
+
+[GNU Octave](gnu.org/software/octave/) is licensed under the [GNU GENERAL PUBLIC LICENSE](gnu.org/licenses/gpl-3.0.html).
+
+[Pure Data](msp.ucsd.edu/software.html) is licensed under the [Standard Improved BSD License](github.com/pure-data/pure-data/blob/master/LICENSE.txt) 
+
 ## TODO
 
 * create pd external with variable number of input/outs (dsp_addv for dsp processing and ? for adding inlets/outlets)
