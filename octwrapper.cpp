@@ -20,10 +20,10 @@
  *                                                                           *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <interpreter.h>
 #include <oct.h>
 #include <octave.h>
 #include <parse.h>
-#include <interpreter.h>
 
 #include "octwrapper.h"
 
@@ -38,22 +38,36 @@ void octwrapper_init()
     interpreter.execute();
 }
 
-static octave_value_list octwrapper_parse(const char* args)
+static octave_value_list octwrapper_argparse(const char* newargs)
 {
-    octave_value_list args2;
+    static std::string args;
+    
+    octave_value_list octargs;
 
-    return args2;
+    if(args.compare(newargs))
+    {
+        args = newargs;
+
+
+
+    }
+
+
+
+    
+
+    return octargs;
 }
 
 
-void octwrapper_run(const char* funcname, float** input, unsigned int ninput, float** output, unsigned int noutput, unsigned int nsamples, float param)
+void octwrapper_run(const char* funcname, float** input, unsigned ninput, float** output, unsigned noutput, unsigned nsamples, float param)
 {
-    //copy input values from input buffers
+    //copy input values from pd input buffers to octave data type
     FloatNDArray nd(dim_vector(nsamples, ninput));
     for (size_t i = 0; i < ninput; i++)
         memcpy(nd.column(i).fortran_vec(), input[i], sizeof(float)*nsamples);
     
-    //create octave inputs
+    //create octave input
     octave_value_list in;
     in(0) = octave_value(nd);
     in(1) = octave_value(param);
@@ -61,7 +75,7 @@ void octwrapper_run(const char* funcname, float** input, unsigned int ninput, fl
     //run octave script
     octave_value_list out = octave::feval(funcname, in, 1);
     
-    //copy output values to output buffer
+    //copy output values from octave data type to pd output buffer
     for (size_t i = 0; i < noutput; i++)
         memcpy(output[i], out(0).float_array_value().column(i).fortran_vec(), sizeof(float)*nsamples);   
 }
