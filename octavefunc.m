@@ -1,5 +1,5 @@
-function y = testfunc(x, gain)
+function y = octavefunc(x, gain)
 
-y = x.*gain;
+y = x*gain;
  
 endfunction
