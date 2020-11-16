@@ -27,7 +27,10 @@
 
 #include "octwrapper.h"
 
-void octwrapper_init()
+
+char octwrapper_msg[250];
+
+bool octwrapper_init()
 {
     static octave::interpreter interpreter;
    
@@ -36,6 +39,8 @@ void octwrapper_init()
     interpreter.read_site_files(true);
     interpreter.read_init_files(true); //.octaverc from current folder and local users home folder
     interpreter.execute();
+    
+    return true;
 }
 
 static octave_value_list octwrapper_argparse(const char* newargs)
@@ -48,25 +53,24 @@ static octave_value_list octwrapper_argparse(const char* newargs)
     {
         args = newargs;
 
-
-
-    }
+        //parse string
 
 
 
-    
+    }  
 
     return octargs;
 }
 
 
-void octwrapper_run(const char* funcname, float** input, unsigned ninput, float** output, unsigned noutput, unsigned nsamples, float param)
+bool octwrapper_run(const char* funcname, float** input, unsigned ninput, float** output, unsigned noutput, unsigned nsamples, float param)
 {
     //copy input values from pd input buffers to octave data type
     FloatNDArray nd(dim_vector(nsamples, ninput));
-    for (size_t i = 0; i < ninput; i++)
-        memcpy(nd.column(i).fortran_vec(), input[i], sizeof(float)*nsamples);
-    
+    for (size_t i = 0; i < ninput; i++)    
+        for (size_t j = 0; j < nsamples; j++)
+            nd.elem(j,i) = input[i][j];
+
     //create octave input
     octave_value_list in;
     in(0) = octave_value(nd);
@@ -77,5 +81,11 @@ void octwrapper_run(const char* funcname, float** input, unsigned ninput, float*
     
     //copy output values from octave data type to pd output buffer
     for (size_t i = 0; i < noutput; i++)
-        memcpy(output[i], out(0).float_array_value().column(i).fortran_vec(), sizeof(float)*nsamples);   
+        for (size_t j = 0; j < nsamples; j++)
+            output[i][j] = out(0).float_array_value().elem(j,i);
+
+    //print error or debug msg
+    //sprintf(octwrapper_msg, "param: %f", param);
+
+    return true; //TODO: add return codes
 }

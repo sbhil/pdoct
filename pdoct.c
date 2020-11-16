@@ -20,6 +20,7 @@
  *                                                                           *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <math.h>
 #include <stdlib.h>
 
 #include <m_pd.h>
@@ -42,13 +43,14 @@ typedef struct _pdoct
   t_object x_obj;
 
   //number of inputs
-  t_float f_nin;
+  unsigned u_nin;
 
   //number of outputs
-  t_float f_nout;
+  unsigned u_nout;
 
-  //needed for replacing float inputs at the (first) signal inlet
-  t_float f_dummy;
+  //needed for replacing float inputs at the signal inlets
+  t_float* f_dummy;
+  t_float  f_dummy2; //this is for the first (main) inlet
 
   //octave script name
   t_symbol *s_octfunc;
@@ -81,20 +83,23 @@ typedef struct _pdoct
 
 t_int *pdoct_perform(t_int *w)
 {
-  post("pdoct_perform: start");
+  //post("pdoct_perform: start");
 
   //get passed data
   t_pdoct    *x          = (t_pdoct *)   (w[1]);
   t_sample  **in         = (t_sample **) (w[2]);
   t_sample  **out        = (t_sample **) (w[3]);
-  int         nsamples   = (int)         (w[4]);
+  unsigned    nsamples   = (unsigned)    (w[4]);
 
   //do processing
-  octwrapper_run(x->s_octfunc->s_name, in, x->f_nin, out, x->f_nout, nsamples, x->f_param);
+  octwrapper_run(x->s_octfunc->s_name, in, x->u_nin, out, x->u_nout, nsamples, x->f_param);
 
-  post("pdoct_perform: end");
+  if (octwrapper_msg[0] != 0) //TODO: more correct way to check for empty string? 
+    post(octwrapper_msg);
 
-  return (w+5); 
+  //post("pdoct_perform: end");
+
+  return &w[5]; 
 }
 
 void pdoct_dsp(t_pdoct *x, t_signal **sp)
@@ -104,12 +109,12 @@ void pdoct_dsp(t_pdoct *x, t_signal **sp)
   //signals are counted with inputs first followed by outputs, both ordered from left to right...
 
   //input pointers
-  for (size_t i = 0; i < x->f_nin; i++)
+  for (size_t i = 0; i < x->u_nin; i++)
     x->x_f_in[i] = sp[i]->s_vec;
 
   //output pointers
-  for (size_t i = 0; i < x->f_nout; i++) 
-    x->x_f_out[i] = sp[(int)x->f_nin+i]->s_vec;
+  for (size_t i = 0; i < x->u_nout; i++)
+    x->x_f_out[i] = sp[i+x->u_nin]->s_vec;
 
   dsp_add
   (
@@ -136,26 +141,29 @@ void pdoct_dsp(t_pdoct *x, t_signal **sp)
 
 void *pdoct_new(t_symbol *s, int argc, t_atom *argv)  
 { 
+  post("pdoct_new (constructor): start");
+
   //new instance
   t_pdoct *x = (t_pdoct *)pd_new(pdoct_class);
 
   //parse constructor arguments
   if (argc == 0)
   {
-    //error
+    //error or passthrough?
   }
   if (argc > 0)
   {
     x->s_octfunc = atom_getsymbol(argv);
-    x->f_nin = x->f_nout = 1;
+    x->u_nin = x->u_nout = 1;
   }
   if (argc > 1)
   {
-    x->f_nin = x->f_nout = atom_getfloat(argv+1);
+    x->u_nin = fmaxf(atom_getfloat(argv+1), 1); //TODO: let zero inlets be allowed
+    x->u_nout = fmaxf(atom_getfloat(argv+1), 1); //always at least one outlet
   }
   if (argc > 2)
   {
-    x->f_nout = atom_getfloat(argv+2);
+    x->u_nout = fmaxf(atom_getfloat(argv+2), 1); //always at least one outlet
   }
   if (argc > 3)
   {
@@ -165,22 +173,24 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
   //init params
   x->f_param = 0;
 
-  //create inlet for parameter argument list
-  x->x_param_in = floatinlet_new(&x->x_obj, &x->f_param); 
-
   //create signal inlets
-  x->x_sig_in = malloc(x->f_nin*sizeof(t_inlet*)); //...allocate memory for inlets
-  for (size_t i = 0; i < x->f_nin-1; i++)
-    x->x_sig_in[i] = inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
+  x->f_dummy = malloc((x->u_nin-1)*sizeof(t_float));
+  x->x_sig_in = malloc((x->u_nin-1)*sizeof(t_inlet*)); //...allocate memory for inlets
+  for (size_t i = 0; i < x->u_nin-1; i++)
+    //x->x_sig_in[i] = inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
+    x->x_sig_in[i] = signalinlet_new(&x->x_obj, x->f_dummy[i]);
+
+  //create inlet for parameter argument list
+  x->x_param_in = floatinlet_new(&x->x_obj, &x->f_param);
 
   //create signal outlets
-  x->x_sig_out = malloc(x->f_nout*sizeof(t_outlet*)); //...allocate memory for outlets
-  for (size_t i = 0; i < x->f_nout; i++)  
+  x->x_sig_out = malloc(x->u_nout*sizeof(t_outlet*)); //...allocate memory for outlets
+  for (size_t i = 0; i < x->u_nout; i++)  
     x->x_sig_out[i] = outlet_new(&x->x_obj, &s_signal);
 
   //allocate memory for data buffer pointers
-  x->x_f_in  = malloc(x->f_nin*sizeof(t_sample*));
-  x->x_f_out = malloc(x->f_nout*sizeof(t_sample*));
+  x->x_f_in  = malloc(x->u_nin*sizeof(t_sample*));
+  x->x_f_out = malloc(x->u_nout*sizeof(t_sample*));
 
   //initialize the octave wrapper
   octwrapper_init();
@@ -198,13 +208,21 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
 
 void *pdoct_delete(t_pdoct* x)
 {
+  post("pdoct_delete (destructor): start");
+
   //deallocate inlet and outlet memory
+  inlet_free(x->x_param_in);
+  for (size_t i = 0; i < x->u_nin-1; i++)
+    inlet_free(x->x_sig_in[i]);
+  for (size_t i = 0; i < x->u_nout; i++)
+    outlet_free(x->x_sig_out[i]);
   free(x->x_sig_in);
   free(x->x_sig_out); 
-
   free(x->x_f_in);
-  free(x->x_f_out); 
-  
+  free(x->x_f_out);
+  free(x->f_dummy);
+
+  post("pdoct_delete (destructor): end");
 }
 
 /* ****************************************************************************
@@ -215,6 +233,7 @@ void *pdoct_delete(t_pdoct* x)
 
 void pdoct_setup(void)
 {  
+  post("pdoct_setup: start");
 
   pdoct_class = class_new
   (
@@ -257,7 +276,8 @@ void pdoct_setup(void)
     //signal class data space type 
     t_pdoct, 
     //
-    f_dummy
+    f_dummy2
   );
 
+  post("pdoct_setup: end");
 }
