@@ -50,13 +50,13 @@ typedef struct _pdoct
 
   //needed for replacing float inputs at the signal inlets
   t_float* f_dummy;
-  t_float  f_dummy2; //this is for the first (main) inlet
+  t_float  f_dummy1; //this is for the first (main) inlet
 
   //octave script name
   t_symbol *s_octfunc;
 
   //parameter list
-  t_float f_param; //TODO: change this to a list instead of just a single float parameter
+  t_symbol  *s_params;
 
   //parameter list inlet
   t_inlet* x_param_in;
@@ -92,10 +92,18 @@ t_int *pdoct_perform(t_int *w)
   unsigned    nsamples   = (unsigned)    (w[4]);
 
   //do processing
-  octwrapper_run(x->s_octfunc->s_name, in, x->u_nin, out, x->u_nout, nsamples, x->f_param);
+  bool success = octwrapper_run(x->s_octfunc->s_name, in, x->u_nin, out, x->u_nout, nsamples, "" /*x->s_params->s_name*/);
 
-  if (octwrapper_msg[0] != 0) //TODO: more correct way to check for empty string? 
+  post(x->s_params->s_name);
+
+  //check if there is an error message from the octwrapper
+  if (!success)
+  {
+    //post message
     post(octwrapper_msg);
+    //clear message
+    sprintf(octwrapper_msg, "");
+  } 
 
   //post("pdoct_perform: end");
 
@@ -170,9 +178,6 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
     //don't care?
   }
 
-  //init params
-  x->f_param = 0;
-
   //create signal inlets
   x->f_dummy = malloc((x->u_nin-1)*sizeof(t_float));
   x->x_sig_in = malloc((x->u_nin-1)*sizeof(t_inlet*)); //...allocate memory for inlets
@@ -180,8 +185,10 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
     //x->x_sig_in[i] = inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
     x->x_sig_in[i] = signalinlet_new(&x->x_obj, x->f_dummy[i]);
 
-  //create inlet for parameter argument list
-  x->x_param_in = floatinlet_new(&x->x_obj, &x->f_param);
+  //create inlet for parameter input
+  //x->x_param_in = inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
+  x->s_params = malloc(sizeof(t_symbol));
+  x->x_param_in = symbolinlet_new(&x->x_obj, &x->s_params);
 
   //create signal outlets
   x->x_sig_out = malloc(x->u_nout*sizeof(t_outlet*)); //...allocate memory for outlets
@@ -193,7 +200,16 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
   x->x_f_out = malloc(x->u_nout*sizeof(t_sample*));
 
   //initialize the octave wrapper
-  octwrapper_init();
+  bool success = octwrapper_init();
+
+   //check if there is an error message from the octwrapper
+  if (!success)
+  {
+    //post message
+    post(octwrapper_msg);
+    //clear message
+    sprintf(octwrapper_msg, "");
+  } 
 
   post("pdoct_new (contructor): end");
 
@@ -276,7 +292,7 @@ void pdoct_setup(void)
     //signal class data space type 
     t_pdoct, 
     //
-    f_dummy2
+    f_dummy1
   );
 
   post("pdoct_setup: end");
