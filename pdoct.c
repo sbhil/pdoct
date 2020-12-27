@@ -20,13 +20,11 @@
  *                                                                           *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <math.h>
 #include <stdlib.h>
 
 #include <m_pd.h>
 
 #include "octwrapper.h"
-
 
 
 /* ****************************************************************************
@@ -53,12 +51,13 @@ typedef struct _pdoct
   t_float  f_dummy1; //this is for the first (main) inlet
 
   //octave script name
-  t_symbol *s_octfunc;
+  t_symbol* s_octfunc;
 
   //parameter list
-  t_symbol  *s_params;
+  char paramname[100];
+  t_float paramval[100];
 
-  //parameter list inlet
+  //parameter inlet
   t_inlet* x_param_in;
 
   //signal inlets
@@ -86,15 +85,13 @@ t_int *pdoct_perform(t_int *w)
   //post("pdoct_perform: start");
 
   //get passed data
-  t_pdoct    *x          = (t_pdoct *)   (w[1]);
-  t_sample  **in         = (t_sample **) (w[2]);
-  t_sample  **out        = (t_sample **) (w[3]);
-  unsigned    nsamples   = (unsigned)    (w[4]);
+  t_pdoct* x = (t_pdoct*) w[1];
+  t_sample** in = (t_sample**) w[2];
+  t_sample** out = (t_sample**) w[3];
+  unsigned nsamples = (unsigned) w[4];
 
   //do processing
   bool success = octwrapper_run(x->s_octfunc->s_name, in, x->u_nin, out, x->u_nout, nsamples, "" /*x->s_params->s_name*/);
-
-  post(x->s_params->s_name);
 
   //check if there is an error message from the octwrapper
   if (!success)
@@ -140,6 +137,21 @@ void pdoct_dsp(t_pdoct *x, t_signal **sp)
   post("pdoct_dsp: end");
 }
 
+void pdoct_param_handler(t_pdoct* x, t_symbol* sel, int argc, t_atom* argv)
+{
+  post("pdoct_param_handler: start");
+
+  post(sel->s_name);
+
+  post("%s", atom_getsymbolarg(0, argc, argv)->s_name);
+
+  for (int i = 1; i < argc; i++)
+  {
+    post("%f", atom_getfloatarg(i, argc, argv));
+  }
+
+  post("pdoct_param_handler: end");
+}
 
 /* ****************************************************************************
  * 
@@ -159,23 +171,25 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
   {
     //error or passthrough?
   }
-  if (argc > 0)
+  if (argc > 0) //TODO: check for valid scriptname?
   {
-    x->s_octfunc = atom_getsymbol(argv);
+    x->s_octfunc = atom_getsymbolarg(0, argc, argv); 
     x->u_nin = x->u_nout = 1;
   }
-  if (argc > 1)
+  if (argc > 1) //TODO: check for float numeric atom type?
   {
-    x->u_nin = fmaxf(atom_getfloat(argv+1), 1); //TODO: let zero inlets be allowed
-    x->u_nout = fmaxf(atom_getfloat(argv+1), 1); //always at least one outlet
+    int n = atom_getfloatarg(1, argc, argv);
+    x->u_nin =  n < 1 ? 1 : n; //TODO: let zero inlets be allowed
+    x->u_nout = n < 1 ? 1 : n; //always at least one outlet
   }
-  if (argc > 2)
+  if (argc > 2) //TODO: check for float numeric atom type?
   {
-    x->u_nout = fmaxf(atom_getfloat(argv+2), 1); //always at least one outlet
+    int n = atom_getfloatarg(2, argc, argv);
+    x->u_nout = n < 1 ? 1 : n; //always at least one outlet
   }
   if (argc > 3)
   {
-    //don't care?
+    //TODO: don't care or error?
   }
 
   //create signal inlets
@@ -186,9 +200,12 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
     x->x_sig_in[i] = signalinlet_new(&x->x_obj, x->f_dummy[i]);
 
   //create inlet for parameter input
-  //x->x_param_in = inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
-  x->s_params = malloc(sizeof(t_symbol));
-  x->x_param_in = symbolinlet_new(&x->x_obj, &x->s_params);
+  //x->s_params = malloc(sizeof(t_symbol));
+  x->x_param_in = inlet_new(&x->x_obj, &x->x_obj.ob_pd, gensym("param"), gensym("param"));
+  //x->x_param_in = inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_anything, &s_anything);
+  //x->x_param_in = inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_anything, gensym("param"));
+  //x->x_param_in = inlet_new(&x->x_obj, &x->x_obj.ob_pd, gensym("param"), &s_anything);
+  //x->x_param_in = symbolinlet_new(&x->x_obj, &x->s_params);
 
   //create signal outlets
   x->x_sig_out = malloc(x->u_nout*sizeof(t_outlet*)); //...allocate memory for outlets
@@ -276,13 +293,38 @@ void pdoct_setup(void)
     pdoct_class,
     //method
     (t_method)pdoct_dsp,
-    //symbolic selctor
+    //symbolic selector
     gensym("dsp"),
     //makes it impossible to manually send the dsp message to the object
     A_CANT,
     //no more arguments ...
     0
   );
+
+  //add param method
+  class_addmethod
+  (
+    //class to add method to
+    pdoct_class,
+    //method
+    (t_method)pdoct_param_handler,
+    //symbolic selector
+    gensym("param"),
+    //arbitrary parameter list
+    A_GIMME,
+    //no more arguments ...
+    0
+  );
+
+/*
+  class_addanything
+  (
+    //class to add method to
+    pdoct_class,
+    //method
+    (t_method)pdoct_param_handler
+  );
+*/
 
   //enable signal input at first inlet 
   CLASS_MAINSIGNALIN
