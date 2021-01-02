@@ -1,22 +1,20 @@
 function y = octavefunc(x, param)
-%% DESCIPTION
+%% DESCRIPTION
+%
+%   x is the input signal. Each column is a separate channel.
+%
+%   param is an optional parameter message contained in a struct. The field 'id' 
+%   contains a string indetifying the parameter and the field 'val' contains a 
+%   float vector of arbitrary length containing the parameter values.  
 
-x = x(:);
-
-disp('lala')
-
-1
-12
 
 %% input checking %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+x = x(:);
+
 %assert(size(x,2)==1); %mono input only
 
-%% init return meassage %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-msg = {};
-
-%% parameter update %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% parameter storage %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 persistent gain
 
@@ -30,19 +28,15 @@ if isempty(pan)
     pan = 0;
 end
 
-if exist('param', 'var')
+%% parameter update %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-      if strcmpi(param.keys, 'gain')
-        gain = param('gain'); 
-      end
+if exist('param', 'var')
       
-%    if strcmpi(param.id, 'gain')
-%        assert(param.val(1)>=0 && param.val(1)<=1)
-%        gain = param.val(1);     
-%    elseif strcmpi(param.id, 'pan')
-%        assert(param.val(1)>=-1 && param.val(1)<=1)
-%        pan = param.val(1); 
-%    end
+    if strcmpi(param.id, 'gain')
+        gain = param.val(1); %TODO: do some bounds checking     
+    elseif strcmpi(param.id, 'pan')
+        pan = param.val(1); %TODO: do some bounds checking
+    end
 
 end
 

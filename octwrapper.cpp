@@ -27,9 +27,6 @@
 
 #include "octwrapper.h"
 
-#include <ov-struct.h>
-#include <ov-base.h>
-#include <ostream>
 #include "pdoct.h"
 
 char octwrapper_msg[1000];
@@ -51,11 +48,11 @@ bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float 
 {
 
     //redirect Octave's stdout to pd
+    //FIXME: this is not working correctly, it only prints the last line!
     std::stringstream ss;
-    ss << octave_stdout.rdbuf() << std::endl;
-    pdoct_post(ss.str().c_str());
-    //octave::flush_stdout();
-    //ss.flush();
+    ss << octave_stdout.rdbuf();
+    if(strcmp(ss.str().c_str(), "")) 
+        pdoct_post(ss.str().c_str());
 
     try
     {
@@ -65,29 +62,26 @@ bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float 
             for (size_t j = 0; j < nsamples; j++)
                 nd.elem(j, i) = input[i][j];
 
-        //create octave input
+        //create octave input list
         octave_value_list in;
         in(0) = octave_value(nd);
 
+        //check if there are any parameters values to pass
         if (nparam > 0)
         {
-            octave_struct param;
+            octave_map param; //this becomes a struct when passed to octave
 
-            //store paramid as 'param.id' field
-            param.assign("id", octave_value(paramid));
+            //parameter identifier field
+            param.assign("id", Cell(octave_value(paramid)));
 
-            //store relevant part of paramval array as 'param.val'
+            //parameter value field
             FloatRowVector val(nparam);
-
             for (size_t i = 0; i < nparam; i++)
                 val(i) = paramval[i];
-
             param.assign("val", octave_value(val));
 
-            //add to input list
-            //in(1) = param.map(umap_unknown);
-            //in(1) = param.squeeze();
-            in(1) = octave_value(param.map_value());
+            //place in input list
+            in(1) = param;
         }
 
         //run octave script

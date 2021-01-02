@@ -146,7 +146,7 @@ void pdoct_dsp(t_pdoct *x, t_signal **sp)
 
 void pdoct_param_handler(t_pdoct* x, t_symbol* sel, int argc, t_atom* argv)
 {
-  post("pdoct_param_handler: start");
+  //post("pdoct_param_handler: start");
 
   //post(sel->s_name);
 
@@ -158,7 +158,7 @@ void pdoct_param_handler(t_pdoct* x, t_symbol* sel, int argc, t_atom* argv)
     {
       strcpy(x->param_name, atom_getsymbolarg(0, argc, argv)->s_name);
 
-      post(x->param_name);
+      //post(x->param_name);
     }
     else
     {
@@ -172,7 +172,7 @@ void pdoct_param_handler(t_pdoct* x, t_symbol* sel, int argc, t_atom* argv)
       {
         x->param_val[i] = atom_getfloatarg(i + 1, argc, argv);
 
-        post("%f", x->param_val[i]);
+        //post("%f", x->param_val[i]);
       }
       else
       {
@@ -185,7 +185,7 @@ void pdoct_param_handler(t_pdoct* x, t_symbol* sel, int argc, t_atom* argv)
 
   }
 
-  post("pdoct_param_handler: end");
+  //post("pdoct_param_handler: end");
 }
 
 /* ****************************************************************************
