@@ -27,70 +27,89 @@
 
 #include "octwrapper.h"
 
-char octwrapper_msg[250];
+#include <ov-struct.h>
+#include <ov-base.h>
+#include <ostream>
+#include "pdoct.h"
+
+char octwrapper_msg[1000];
 
 bool octwrapper_init()
 {
     static octave::interpreter interpreter;
-   
+
     interpreter.initialize_history(false);
     interpreter.initialize_load_path(true);
     interpreter.read_site_files(true);
     interpreter.read_init_files(true); //.octaverc from current folder and local users home folder
     bool success = interpreter.execute();
-    
+
     return success;
 }
 
-static octave_value_list octwrapper_argparse(const char* newargs)
+bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float **output, unsigned noutput, unsigned nsamples, unsigned nparam, const char *paramid, float *paramval)
 {
-    static std::string args;
-    
-    octave_value_list octargs;
 
-    if(args.compare(newargs))
+    //redirect Octave's stdout to pd
+    std::stringstream ss;
+    ss << octave_stdout.rdbuf() << std::endl;
+    pdoct_post(ss.str().c_str());
+    //octave::flush_stdout();
+    //ss.flush();
+
+    try
     {
-        args = newargs;
+        //copy input values from pd input buffers to octave data type
+        FloatNDArray nd(dim_vector(nsamples, ninput));
+        for (size_t i = 0; i < ninput; i++)
+            for (size_t j = 0; j < nsamples; j++)
+                nd.elem(j, i) = input[i][j];
 
-        //parse string
+        //create octave input
+        octave_value_list in;
+        in(0) = octave_value(nd);
 
-        //const char* substr;
-        //substr = strtok(args.c_str(), " ");
+        if (nparam > 0)
+        {
+            octave_struct param;
 
+            //store paramid as 'param.id' field
+            param.assign("id", octave_value(paramid));
 
+            //store relevant part of paramval array as 'param.val'
+            FloatRowVector val(nparam);
 
-    }  
+            for (size_t i = 0; i < nparam; i++)
+                val(i) = paramval[i];
 
-    octargs.append(args);
+            param.assign("val", octave_value(val));
 
-    return octargs;
-}
+            //add to input list
+            //in(1) = param.map(umap_unknown);
+            //in(1) = param.squeeze();
+            in(1) = octave_value(param.map_value());
+        }
 
+        //run octave script
+        octave_value_list out = octave::feval(funcname, in, 1);
 
-bool octwrapper_run(const char* funcname, float** input, unsigned ninput, float** output, unsigned noutput, unsigned nsamples, const char* params)
-{
-    //copy input values from pd input buffers to octave data type
-    FloatNDArray nd(dim_vector(nsamples, ninput));
-    for (size_t i = 0; i < ninput; i++)    
-        for (size_t j = 0; j < nsamples; j++)
-            nd.elem(j,i) = input[i][j];
+        //copy output values from octave data type to pd output buffer
+        for (size_t i = 0; i < noutput; i++)
+            for (size_t j = 0; j < nsamples; j++)
+                output[i][j] = out(0).float_array_value().elem(j, i);
+    }
+    catch (const octave::exit_exception &ex)
+    {
+        sprintf(octwrapper_msg, "octave::exit_exception: Octave interpreter exited with status: %i", ex.exit_status());
 
-    //create octave input
-    octave_value_list in;
-    in(0) = octave_value(nd);
-    in(1) = 1;
-    //in.append(octwrapper_argparse(params));
+        return false;
+    }
+    catch (const octave::execution_exception &ex)
+    {
+        sprintf(octwrapper_msg, "octave::execution_exception: error encountered in Octave evaluator: %s", ex.info().c_str());
 
-    //run octave script
-    octave_value_list out = octave::feval(funcname, in, 1);
-    
-    //copy output values from octave data type to pd output buffer
-    for (size_t i = 0; i < noutput; i++)
-        for (size_t j = 0; j < nsamples; j++)
-            output[i][j] = out(0).float_array_value().elem(j,i);
-
-    //print error or debug msg
-    //sprintf(octwrapper_msg, "param: %f", param);
+        return false;
+    }
 
     return true;
 }

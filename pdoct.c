@@ -21,10 +21,14 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <m_pd.h>
 
 #include "octwrapper.h"
+
+#define PARAM_NAME_LENGTH 100
+#define PARAM_VAL_LENGTH 100
 
 
 /* ****************************************************************************
@@ -54,8 +58,9 @@ typedef struct _pdoct
   t_symbol* s_octfunc;
 
   //parameter list
-  char paramname[100];
-  t_float paramval[100];
+  char param_name[PARAM_NAME_LENGTH];
+  t_float param_val[PARAM_VAL_LENGTH];
+  unsigned u_nparam;
 
   //parameter inlet
   t_inlet* x_param_in;
@@ -91,7 +96,9 @@ t_int *pdoct_perform(t_int *w)
   unsigned nsamples = (unsigned) w[4];
 
   //do processing
-  bool success = octwrapper_run(x->s_octfunc->s_name, in, x->u_nin, out, x->u_nout, nsamples, "" /*x->s_params->s_name*/);
+  bool success = octwrapper_run(x->s_octfunc->s_name, in, x->u_nin, out, x->u_nout, nsamples, x->u_nparam, x->param_name, x->param_val);
+
+  x->u_nparam = 0;
 
   //check if there is an error message from the octwrapper
   if (!success)
@@ -141,13 +148,41 @@ void pdoct_param_handler(t_pdoct* x, t_symbol* sel, int argc, t_atom* argv)
 {
   post("pdoct_param_handler: start");
 
-  post(sel->s_name);
+  //post(sel->s_name);
 
-  post("%s", atom_getsymbolarg(0, argc, argv)->s_name);
-
-  for (int i = 1; i < argc; i++)
+  if (argc > 1)
   {
-    post("%f", atom_getfloatarg(i, argc, argv));
+
+    //store parameter id
+    if (argv[0].a_type == A_SYMBOL)
+    {
+      strcpy(x->param_name, atom_getsymbolarg(0, argc, argv)->s_name);
+
+      post(x->param_name);
+    }
+    else
+    {
+      //TODO: error the param name should be a symbol
+    }
+
+    //store parameter values
+    for (int i = 0; i < argc - 1; i++)
+    {
+      if (argv[i + 1].a_type == A_FLOAT)
+      {
+        x->param_val[i] = atom_getfloatarg(i + 1, argc, argv);
+
+        post("%f", x->param_val[i]);
+      }
+      else
+      {
+        //TODO: error the param value should be a float
+      }
+    }
+
+    //store number of parameter values
+    x->u_nparam = argc - 1;
+
   }
 
   post("pdoct_param_handler: end");
@@ -178,13 +213,13 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
   }
   if (argc > 1) //TODO: check for float numeric atom type?
   {
-    int n = atom_getfloatarg(1, argc, argv);
+    int n = atom_getintarg(1, argc, argv);
     x->u_nin =  n < 1 ? 1 : n; //TODO: let zero inlets be allowed
     x->u_nout = n < 1 ? 1 : n; //always at least one outlet
   }
   if (argc > 2) //TODO: check for float numeric atom type?
   {
-    int n = atom_getfloatarg(2, argc, argv);
+    int n = atom_getintarg(2, argc, argv);
     x->u_nout = n < 1 ? 1 : n; //always at least one outlet
   }
   if (argc > 3)
@@ -338,4 +373,14 @@ void pdoct_setup(void)
   );
 
   post("pdoct_setup: end");
+}
+
+void pdoct_post(const char* msg)
+{
+  post(msg);
+}
+
+void pdoct_error(const char* msg)
+{
+  error(msg);
 }
