@@ -30,7 +30,7 @@
 
 extern char octwrapper_msg[];
 
-bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float **output, unsigned noutput, unsigned nsamples, float param);
+bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float **output, unsigned noutput, unsigned nsamples, unsigned nparam, const char* paramid, float* paramval);
 bool octwrapper_init();
 
 #ifdef __cplusplus

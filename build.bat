@@ -2,7 +2,7 @@ clear
 
 C:/cygwin64/bin/x86_64-w64-mingw32-g++.exe ^
 -I C:\Octave\octave-5.2.0\mingw64\include\octave-5.2.0\octave ^
--c c:\Users\sbh\Dropbox\Synth\pd\externals\pdoct\octwrapper.cpp
+-c C:\Users\sbh\Dropbox\Synth\pd\externals\pdoct\octwrapper.cpp
 
 C:/cygwin64/bin/x86_64-w64-mingw32-gcc.exe ^
 -I "C:/Program Files/Pd/src/" ^
