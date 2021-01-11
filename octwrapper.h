@@ -28,9 +28,7 @@
     extern "C" {
 #endif
 
-extern char octwrapper_msg[];
-
-bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float **output, unsigned noutput, unsigned nsamples, unsigned nparam, const char* paramid, float* paramval);
+bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float **output, unsigned noutput, unsigned nsamples, const char* paramid, float* paramval, unsigned nparam);
 bool octwrapper_init();
 
 #ifdef __cplusplus

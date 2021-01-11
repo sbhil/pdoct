@@ -24,14 +24,14 @@ pdoct is licensed under the [GNU GENERAL PUBLIC LICENSE](gnu.org/licenses/gpl-3.
 
 ## TODO
 
-* create pd external with variable number of input/outs (dsp_addv for dsp processing and ? for adding inlets/outlets)
-* solve issue where additional input wont let signals connct to them
-* make parser for a list of parameters to pass from pd to octave
-* create pd patch that concatenates several parameters (floats or strings) into one list to pass to pdoct~
+* make it possible to have zero or more signal inlets ( make the external handle signals without using CLASS_MAINSIGNALIN)
+* make it unneccesary to use the 'param' symbol as the first symbol for the parameter inlet
+* decide on a clear way of deciding what is in pdoct.c as oppsoed to ocwrapper.c (integrate them more tighly or separate completely....)
 * create pd help file
+* expand pd example patch
+* further develop octave example .m-file
 * make octave read the sytstem .octaverc files, not just the local users
 * add some error handling to e.g.
- * launching the octave interpreter
  * invalid filenames
  * same number of in/out for octave functions and pdoct external
  

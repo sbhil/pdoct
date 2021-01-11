@@ -91,27 +91,24 @@ t_int *pdoct_perform(t_int *w)
 
   //get passed data
   t_pdoct* x = (t_pdoct*) w[1];
-  t_sample** in = (t_sample**) w[2];
-  t_sample** out = (t_sample**) w[3];
-  unsigned nsamples = (unsigned) w[4];
+  unsigned nsamples = (unsigned) w[2];
 
   //do processing
-  bool success = octwrapper_run(x->s_octfunc->s_name, in, x->u_nin, out, x->u_nout, nsamples, x->u_nparam, x->param_name, x->param_val);
+  bool success = octwrapper_run(x->s_octfunc->s_name, x->x_f_in, x->u_nin, x->x_f_out, x->u_nout, nsamples, x->param_name, x->param_val, x->u_nparam);
 
-  x->u_nparam = 0;
-
-  //check if there is an error message from the octwrapper
+  //clear param
+  if(strcmp(x->param_name, ""))
+    strcpy(x->param_name, "");
+  
+  //check if the octwrapper ran succesfully
   if (!success)
   {
-    //post message
-    post(octwrapper_msg);
-    //clear message
-    sprintf(octwrapper_msg, "");
+    //TODO: do something
   } 
 
   //post("pdoct_perform: end");
 
-  return &w[5]; 
+  return &w[3]; 
 }
 
 void pdoct_dsp(t_pdoct *x, t_signal **sp)
@@ -133,12 +130,11 @@ void pdoct_dsp(t_pdoct *x, t_signal **sp)
     // add perform rutine to dsp tree
     pdoct_perform, 
     //number of arguments to pass
-    4, 
-    //actual arguments
-    x, //object data
-    x->x_f_in, //input pointers
-    x->x_f_out, //output pointers
-    sp[0]->s_n //vector length (same for all inputs and outputs)
+    2, 
+    //first argument: object data
+    x, 
+    //second argument: vector length (same for all inputs and outputs...)
+    sp[0]->s_n 
   );
 
   post("pdoct_dsp: end");
@@ -150,7 +146,7 @@ void pdoct_param_handler(t_pdoct* x, t_symbol* sel, int argc, t_atom* argv)
 
   //post(sel->s_name);
 
-  if (argc > 1)
+  if (argc > 0)
   {
 
     //store parameter id
@@ -228,19 +224,13 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
   }
 
   //create signal inlets
-  x->f_dummy = malloc((x->u_nin-1)*sizeof(t_float));
+  x->f_dummy = malloc((x->u_nin-1)*sizeof(t_float)); //...allocate 
   x->x_sig_in = malloc((x->u_nin-1)*sizeof(t_inlet*)); //...allocate memory for inlets
   for (size_t i = 0; i < x->u_nin-1; i++)
-    //x->x_sig_in[i] = inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
     x->x_sig_in[i] = signalinlet_new(&x->x_obj, x->f_dummy[i]);
 
   //create inlet for parameter input
-  //x->s_params = malloc(sizeof(t_symbol));
   x->x_param_in = inlet_new(&x->x_obj, &x->x_obj.ob_pd, gensym("param"), gensym("param"));
-  //x->x_param_in = inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_anything, &s_anything);
-  //x->x_param_in = inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_anything, gensym("param"));
-  //x->x_param_in = inlet_new(&x->x_obj, &x->x_obj.ob_pd, gensym("param"), &s_anything);
-  //x->x_param_in = symbolinlet_new(&x->x_obj, &x->s_params);
 
   //create signal outlets
   x->x_sig_out = malloc(x->u_nout*sizeof(t_outlet*)); //...allocate memory for outlets
@@ -254,13 +244,10 @@ void *pdoct_new(t_symbol *s, int argc, t_atom *argv)
   //initialize the octave wrapper
   bool success = octwrapper_init();
 
-   //check if there is an error message from the octwrapper
+   //check if init ran succesfully
   if (!success)
   {
-    //post message
-    post(octwrapper_msg);
-    //clear message
-    sprintf(octwrapper_msg, "");
+    //TODO: do something
   } 
 
   post("pdoct_new (contructor): end");
@@ -321,7 +308,7 @@ void pdoct_setup(void)
     0
   );
 
-  //add dsp method
+  //add "dsp" method
   class_addmethod
   (
     //class to add method to
@@ -336,7 +323,7 @@ void pdoct_setup(void)
     0
   );
 
-  //add param method
+  //add "param" method
   class_addmethod
   (
     //class to add method to

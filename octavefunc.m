@@ -10,33 +10,46 @@ function y = octavefunc(x, param)
 
 %% input checking %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-x = x(:);
-
-%assert(size(x,2)==1); %mono input only
+if (size(x,2) ~= 1) %mono input only (one input channel only)
+  error('only mono input allowed')
+end
 
 %% parameter storage %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-persistent gain
+persistent bypass
+if isempty(bypass)
+    bypass = 0;
+end
 
+persistent gain
 if isempty(gain)
     gain = 1;
 end
 
 persistent pan
-
 if isempty(pan)
     pan = 0;
 end
+
+%% memory storage %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 %% parameter update %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if exist('param', 'var')
       
-    if strcmpi(param.id, 'gain')
+  switch(param.id)  
+    case {'reset'}
+
+    case {'bypass'}
+      bypass = param.val(1);
+    case {'gain'}
         gain = param.val(1); %TODO: do some bounds checking     
-    elseif strcmpi(param.id, 'pan')
+    case {'pan'}
         pan = param.val(1); %TODO: do some bounds checking
-    end
+    otherwise
+      printf('unrecognized parameter id "%s"', param.id)    
+  end
 
 end
 
@@ -44,13 +57,22 @@ end
 
 y = zeros(size(x,1), 2);
 
-for n = 1:length(x)
+if ~bypass %normal processing
   
-  x_ = x(n) * gain;
+  for n = 1:length(x)
   
-  y(n,1) = x_ * (1 - pan)/2;
-  y(n,2) = x_ * (1 + pan)/2;
+    x_ = x(n) * gain;
+  
+    y(n,1) = x_ * (1 - pan)/2;
+    y(n,2) = x_ * (1 + pan)/2;
  
+  end
+
+else %bypass
+  
+  y(:,1) = x/2;
+  y(:,2) = x/2;
+
 end
 
 endfunction

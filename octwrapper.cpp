@@ -29,8 +29,6 @@
 
 #include "pdoct.h"
 
-char octwrapper_msg[1000];
-
 bool octwrapper_init()
 {
     static octave::interpreter interpreter;
@@ -44,15 +42,15 @@ bool octwrapper_init()
     return success;
 }
 
-bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float **output, unsigned noutput, unsigned nsamples, unsigned nparam, const char *paramid, float *paramval)
+bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float **output, unsigned noutput, unsigned nsamples, const char *paramid, float *paramval, unsigned nparam)
 {
 
     //redirect Octave's stdout to pd
     //FIXME: this is not working correctly, it only prints the last line!
-    std::stringstream ss;
-    ss << octave_stdout.rdbuf();
-    if(strcmp(ss.str().c_str(), "")) 
-        pdoct_post(ss.str().c_str());
+    std::stringstream ss_out;
+    ss_out << octave_stdout.rdbuf();
+    if(strcmp(ss_out.str().c_str(), "")) 
+        pdoct_post(ss_out.str().c_str());
 
     try
     {
@@ -67,7 +65,7 @@ bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float 
         in(0) = octave_value(nd);
 
         //check if there are any parameters values to pass
-        if (nparam > 0)
+        if (strcmp(paramid, ""))
         {
             octave_map param; //this becomes a struct when passed to octave
 
@@ -94,13 +92,21 @@ bool octwrapper_run(const char *funcname, float **input, unsigned ninput, float 
     }
     catch (const octave::exit_exception &ex)
     {
-        sprintf(octwrapper_msg, "octave::exit_exception: Octave interpreter exited with status: %i", ex.exit_status());
+        std::stringstream ss_err;
+
+        ss_err << "octave::exit_exception: Octave interpreter exited with status: " <<  ex.exit_status();
+
+        pdoct_post(ss_err.str().c_str());
 
         return false;
     }
     catch (const octave::execution_exception &ex)
     {
-        sprintf(octwrapper_msg, "octave::execution_exception: error encountered in Octave evaluator: %s", ex.info().c_str());
+        std::stringstream ss_err;
+
+        ss_err << "octave::execution_exception: error encountered in Octave evaluator:  " <<  ex.info().c_str();
+
+        pdoct_post(ss_err.str().c_str());
 
         return false;
     }
